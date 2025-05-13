@@ -10,7 +10,6 @@ Created for [Re:MakePlace](https://github.com/RemakePlace/app) [Crowdin project]
 -   Strips `<Emphasis>` tags and normalizes case for matching.
 -   Logs every replacement and warns on missing mappings.
 -   Customizable CSV directory and language settings.
--   Prints help on invalid input or when invoked without arguments.
 
 ## Prerequisites
 
@@ -30,6 +29,11 @@ No any dependencies!
 ## Usage
 
 Place your CSV files in a `csv/` directory, named `Item_EN.csv`, `Item_JP.csv`, etc.
+
+It's only supposed to replace what's in `Item.csv`.
+
+I'm content with just getting the item name right, I don't really care about the name of the painting, etc.
+Feel free to modify it to support those if you want and give some PR.
 
 ```bash
 # Default: translate English → Japanese
