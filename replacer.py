@@ -89,6 +89,9 @@ def main():
     parser.add_argument('--src', choices=['en','jp','de','fr'], default='en', help='Source language (default: en)')
     parser.add_argument('--tgt', choices=['en','jp','de','fr'], default='jp', help='Target language (default: jp)')
 
+    if args.src == args.tgt:
+        parser.error(f"Source ({args.src}) and target ({args.tgt}) languages must differ.")
+
     # print help if no args or invalid usage
     if len(sys.argv) == 1:
         parser.print_help()
@@ -108,16 +111,31 @@ def main():
     logging.info('=== Script Start ===')
 
     # determine file names
-    en_csv = os.path.join(args.csv_dir, f'Item_{args.src.upper()}.csv')
-    tgt_csv = os.path.join(args.csv_dir, f'Item_{args.tgt.upper()}.csv')
+    try:
+        en_csv = os.path.join(args.csv_di, f'Item_{args.src.upper()}.csv')
+        tgt_csv = os.path.join(args.csv_dir, f'Item_{args.tgt.upper()}.csv')
+    except FileNotFoundError as e:
+        logging.error(f"Can't find CSV file: {e.filename}")
+        sys.exit(1)
+    except Exception as e:
+        logging.error(f"Error has occurred while loading the map.: {e}")
+        sys.exit(1)
     out_po = args.po_out or args.po_in.replace('.po', f'.{args.tgt}.po')
 
     # load mappings
-    eng_map = load_mapping(en_csv, 'key', 'Singular', normalize_key=True)
-    id_map = load_mapping(tgt_csv, 'key', 'Name', normalize_key=False)
+    try:
+        eng_map = load_mapping(en_csv, 'key', 'Singular', normalize_key=True)
+        id_map = load_mapping(tgt_csv, 'key', 'Name', normalize_key=False)
+    except Exception as e:
+        logging.error(f"Error has occurred while loading the map.: {e}")
+        sys.exit(1)
     logging.info(f"Loaded {len(eng_map)} {args.src}->ID, {len(id_map)} ID->{args.tgt}")
 
-    translate(args.po_in, out_po, eng_map, id_map, args.src, args.tgt)
+    try:
+        translate(args.po_in, out_po, eng_map, id_map, args.src, args.tgt)
+    except Exception as e:
+        logging.exception("An unexpected error has occurred during translation.")
+        sys.exit(1)
     logging.info('=== Script End ===')
 
 if __name__ == '__main__':
