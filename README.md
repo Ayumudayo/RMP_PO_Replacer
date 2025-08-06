@@ -13,7 +13,7 @@ Created for [Re:MakePlace](https://github.com/RemakePlace/app) [Crowdin project]
 
 ## Prerequisites
 
-### Current FFXIV Version is `2025.05.17.0000.0000` (7.25)
+### Current FFXIV Version is `2025.07.30.0000.0000` (7.30)
 
 -   CSV files exported from FFXIV data:
     -   And name csv files like below.
@@ -37,11 +37,13 @@ Feel free to modify it to support those if you want and give some PR.
 
 ```bash
 # Default: translate English → Japanese
-python replace.py AssetName.po
+python replacer.py AssetName.po
+
 # Explicit source/target, e.g. German → French
-python replace.py AssetName.po AssetName.fr.po --src de --tgt fr
+python replacer.py AssetName.po AssetName.fr.po --src de --tgt fr
+
 # Specify a different CSV folder
-python replace.py --csv-dir ./data/csv AssetName.po
+python replacer.py --csv-dir ./data/csv AssetName.po
 ```
 
 ### Command-line Options

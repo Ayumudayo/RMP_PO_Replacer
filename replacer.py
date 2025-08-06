@@ -8,15 +8,17 @@ import time
 
 
 def normalize(text: str) -> str:
-    """Strip <Emphasis> tags and lowercase for matching."""
-    return re.sub(r'</?Emphasis>', '', text).strip().lower()
+    """Strip HTML tags, punctuation, and lowercase for matching."""
+    text = re.sub(r'<[^>]+>', '', text)  # Strip tags
+    text = re.sub(r'[\"\',.?!:;()]|', '', text)  # Strip punctuation
+    return text.strip().lower()
 
 
-def load_mapping(csv_path: str, key_col: str, val_col: str, normalize_key=False) -> dict:
+def load_mapping(csv_path: str, key_col: str, val_cols: list[str], normalize_key=False) -> dict:
     """
     Load a CSV mapping:
-      - If normalize_key is True: map normalized val_col -> key_col
-      - Else: map key_col -> val_col
+      - If normalize_key is True: map normalized val_col -> key_col for each val_col in val_cols
+      - Else: map key_col -> first val_col
     Skips first three header lines.
     """
     mapping = {}
@@ -26,18 +28,22 @@ def load_mapping(csv_path: str, key_col: str, val_col: str, normalize_key=False)
         names = next(reader)
         next(reader)
         key_idx = cols.index(key_col)
-        val_idx = names.index(val_col)
+        val_idxs = [names.index(v) for v in val_cols]
         for row in reader:
-            if len(row) <= max(key_idx, val_idx):
+            if len(row) <= max(key_idx, *val_idxs):
                 continue
             item_id = row[key_idx].strip('"')
-            name = row[val_idx].strip('"')
-            if not item_id or not name:
+            if not item_id:
                 continue
             if normalize_key:
-                mapping[normalize(name)] = item_id
+                for val_idx in val_idxs:
+                    name = row[val_idx].strip('"')
+                    if name:
+                        mapping[normalize(name)] = item_id
             else:
-                mapping[item_id] = name
+                name = row[val_idxs[0]].strip('"')
+                if name:
+                    mapping[item_id] = name
     return mapping
 
 
@@ -53,7 +59,8 @@ def translate(po_in: str, po_out: str, eng_map: dict, id_map: dict, src: str, tg
         msgid = None
         for line in fin:
             if line.startswith('msgid '):
-                msgid = re.match(r'msgid\s+"(.*)"', line).group(1)
+                match = re.match(r'msgid\s+\"(.*)\"', line)
+                msgid = match.group(1) if match else None
                 fout.write(line)
                 continue
             if msgid and line.strip() == 'msgstr ""':
@@ -89,21 +96,22 @@ def main():
     parser.add_argument('--src', choices=['en','jp','de','fr'], default='en', help='Source language (default: en)')
     parser.add_argument('--tgt', choices=['en','jp','de','fr'], default='jp', help='Target language (default: jp)')
 
-    if args.src == args.tgt:
-        parser.error(f"Source ({args.src}) and target ({args.tgt}) languages must differ.")
+    # override error to show help
+    def custom_error(message):
+        sys.stderr.write(f"Error: {message}\n\n")
+        parser.print_help()
+        sys.exit(2)
+    parser.error = custom_error
 
-    # print help if no args or invalid usage
+    # print help if no args
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(0)
-    # override error to show help
-    def error(msg):
-        sys.stderr.write(f"Error: {msg}\n\n")
-        parser.print_help()
-        sys.exit(2)
-    parser.error = error
 
     args = parser.parse_args()
+
+    if args.src == args.tgt:
+        parser.error(f"Source ({args.src}) and target ({args.tgt}) languages must differ.")
 
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s %(levelname)s: %(message)s',
@@ -112,7 +120,7 @@ def main():
 
     # determine file names
     try:
-        en_csv = os.path.join(args.csv_di, f'Item_{args.src.upper()}.csv')
+        en_csv = os.path.join(args.csv_dir, f'Item_{args.src.upper()}.csv')
         tgt_csv = os.path.join(args.csv_dir, f'Item_{args.tgt.upper()}.csv')
     except FileNotFoundError as e:
         logging.error(f"Can't find CSV file: {e.filename}")
@@ -124,8 +132,8 @@ def main():
 
     # load mappings
     try:
-        eng_map = load_mapping(en_csv, 'key', 'Singular', normalize_key=True)
-        id_map = load_mapping(tgt_csv, 'key', 'Name', normalize_key=False)
+        eng_map = load_mapping(en_csv, 'key', ['Singular', 'Name'], normalize_key=True)
+        id_map = load_mapping(tgt_csv, 'key', ['Name'], normalize_key=False)
     except Exception as e:
         logging.error(f"Error has occurred while loading the map.: {e}")
         sys.exit(1)
