@@ -13,7 +13,7 @@ Created for [Re:MakePlace](https://github.com/RemakePlace/app) [Crowdin project]
 
 ## Prerequisites
 
-### Current FFXIV Version is `2025.07.30.0000.0000` (7.30)
+### Current FFXIV Version is `2025.08.07.0000.0000` (7.30h1)
 
 -   CSV files exported from FFXIV data:
     -   And name csv files like below.
